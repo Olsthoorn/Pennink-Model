@@ -31,15 +31,15 @@ import os
 import sys
 import numpy as np
 from fdm import Grid
-from mflab import mf_paramtools
+from mf6lab import mf6tools
 import pandas as pd
 
-HOME = '/Users/Theo/GRWMODELS/python/Pennink_model/'
+HOME = '/Users/Theo/GRWMODELS/python/Pennink-Model/'
 
 LENGTH_UNITS = 'centimeters'
 TIME_UNITS = 'minutes'
 
-dirs = mf_paramtools.Dirs(HOME)
+dirs = mf6tools.Dirs(HOME)
 
 sim_name = 'Series2' # Should match with the excel workbook with the parameters
 dirs = dirs.add_case(sim_name)
@@ -157,7 +157,7 @@ t_inkOff = np.datetime64('1904-09-01T13:20')
 a photo was taken. The period numbers are computed from the photo times. It is at these times that one or more the boundary conditions may change, i.e. switching on or off of the ink to
 show the stream lines.
 """
-perDF = mf_paramtools.get_periodata_from_excel(params_wbk, sheet_name='PER')
+perDF = mf6tools.get_periodata_from_excel(params_wbk, sheet_name='PER')
 nper = len(perDF)
 period_data = [tuple(sp) for sp in perDF[['PERLEN', 'NSTP', 'TSMULT']].values]
 
@@ -209,7 +209,7 @@ PEFF = gr.const(por)
 PEFF[gr.ZM > zCapZone] = por / 3 # My estimate for the unsaturated zone
 
 # %% === Gwfic ======== Initial condictions (head)
-STRTHD = gr.const(1) * (hCanL + hCanR) / 2. # Average between the two canal levels
+STRTHD = gr.const(1) * (hCanL + hCanR) / 2. + 5 # Average between the two canal levels, extra to avoid useless first contour
 STRTHD[IDOMAIN == IDCL] = hCanL # in left canal
 STRTHD[IDOMAIN == IDCR] = hCanR # in right canal
 

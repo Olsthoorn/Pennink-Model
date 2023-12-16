@@ -4,11 +4,11 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
-cws = '/Users/Theo/GRWMODELS/python/Pennink_model/cases/Series2'
+cws = '/Users/Theo/GRWMODELS/python/Pennink-Model/cases/Series2'
 os.chdir(cws)
 
 import mf_adapt
-from mflab import mf_setup
+from mf6lab import mf_setup
 
 logging.info("Running from {}".format(cws))
 

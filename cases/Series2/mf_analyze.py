@@ -9,12 +9,13 @@ import matplotlib.path as path
 import flopy
 import mf_adapt
 from mf_adapt import gr
-from mflab.mf_contourtools import get_orderly_levels
+from mf6lab.mf6contourtools import get_contour_levels
 from fdm.mf6_face_flows import get_struct_flows # (flowjas, grb_file=None, verbose=False)
 from PIL import Image
 import matplotlib.animation as animation
+from matplotlib import colormaps
 
-SAVE_ANIMATION = True
+SAVE_ANIMATION = False
 
 dirs = mf_adapt.dirs
 grb_file = os.path.join(dirs.GWF, mf_adapt.sim_name + 'Gwf.dis.grb')
@@ -76,12 +77,12 @@ flowjas = budObj.get_data(text='FLOW-JA')
 
 fflows = get_struct_flows([flowjas], grb_file=grb_file, verbose=False)
 
-psi = gr.psi_row(fflows[-1]['frf'])
+psi = gr.psi_row(fflows['frf'][0])
 psi_min, psi_max = np.unique(psi)[[0, -1]]
 
-crange = get_orderly_levels(cmin, cmax, 20)[1:]
-prange = get_orderly_levels(psi_min, psi_max, 30)
-hrange = get_orderly_levels(hmin, hmax, 20)
+crange = get_contour_levels(cmin, cmax, 20); crange = crange[crange > 0.0]
+prange = get_contour_levels(*np.unique(psi)[[0, -1]], 20)
+hrange = get_contour_levels(hmin, hmax, 20)
 
 startdatetime = np.datetime64(sim.tdis.start_date_time.get_data().replace('t', ' '))
 datetimes = startdatetime + np.array(concObj.times) * np.timedelta64(1, 'm')
@@ -109,17 +110,19 @@ if False:
 h = headsObj.get_data(kstpkper=(0,0))[:, 0, :]
 c = concObj.get_data(kstpkper=(0,0))[:, 0, :]
 
+cmap = 'binary'
+
 caxH = ax.contour( gr.xc, gr.zc,  np.ma.array(  h, mask=np.isnan(h)), levels=hrange)
 caxP = ax.contour( gr.Xp, gr.Zpx, np.ma.array(psi, mask=get_psi_mask(h)), levels=prange) 
 caxC = ax.contourf(gr.xc, gr.zc,  np.ma.array( c, mask=np.isnan(c)),
                    levels=crange,
-                   cmap='gray')
+                   cmap=cmap)
 
-time_units = sim.tdis.time_units.get_data(),
+time_units = sim.tdis.time_units.get_data()
 
 def update(frame):
     """Animation update function."""
-    global caxH, caxC, Qchd
+    global caxH, caxP, caxC, Qchd
     ttl.set_text("Pennink {}, Frame={}, t = {} {}, Q = {:.2f} cm3/min"
                  .format(sim.name, frame,
                          datetimes[frame],
@@ -129,6 +132,11 @@ def update(frame):
     kstpkper = np.array(concObj.kstpkper[frame]) - 1
     h = headsObj.get_data(kstpkper=kstpkper)[:, 0, :]
     c = concObj.get_data(kstpkper=kstpkper)[ :, 0, :]
+    psi = gr.psi_row(fflows['frf'][frame])
+    
+    for coll in caxP.collections:
+        coll.remove()
+    caxP = ax.contour(gr.Xp, gr.Zpx, np.ma.array(psi, mask=get_psi_mask(h)), levels=prange)
 
     for coll in caxH.collections:
         coll.remove()
@@ -137,9 +145,9 @@ def update(frame):
     for coll in caxC.collections:
         coll.remove()
     caxC = ax.contourf(gr.xc, gr.zc,  np.ma.array( c, mask=np.isnan(c)),
-                       levels=crange, cmap='gray')
+                       levels=crange, cmap=cmap)
     
-    return (frame, caxH, caxC, ttl) # Return affected artists
+    return (frame, caxH, caxP, caxC, ttl) # Return affected artists
 
 ani = animation.FuncAnimation(fig=fig, func=update,                              
                               frames=len(concObj.times),
@@ -147,7 +155,9 @@ ani = animation.FuncAnimation(fig=fig, func=update,
                               repeat=False)
 
 if SAVE_ANIMATION:
-    ani.save(filename = os.path.join(dirs.SIM, sim.name + '.mp4'), writer='ffmpeg')
+    videoname = os.path.join(dirs.SIM, sim.name + '.mp4')
+    print("Saving video to: {}".format(videoname))
+    ani.save(filename = videoname, writer='ffmpeg')
 else:
     plt.show()
 
