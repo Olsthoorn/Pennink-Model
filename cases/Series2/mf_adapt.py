@@ -25,8 +25,6 @@
 #
 # TO 090312
 
-# clear variables
-
 import os
 import sys
 import numpy as np
